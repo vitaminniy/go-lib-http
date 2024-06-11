@@ -1,0 +1,10 @@
+func (cl *{{ .ClientName }}) {{ .Name }}(ctx context.Context, request *{{ .Request }}) (*{{ .Response }}, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare request: %w", err)
+	}
+
+	_ = req
+
+	return nil, errors.New("not implemented")
+}
