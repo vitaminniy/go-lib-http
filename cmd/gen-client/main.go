@@ -17,9 +17,12 @@ import (
 	"github.com/pb33f/libopenapi/orderedmap"
 )
 
+var clientName = flag.String("client-name", "", "name of the generated client; name will be canonized; must be set")
+
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: go-http-gen [options] <input-file>\n")
-	fmt.Fprintf(os.Stderr, "\tgo-http-gen testdata/vendor-search.yaml\n")
+	fmt.Fprintf(os.Stderr, "\tgo-http-gen -client-name VendorsClient testdata/vendor-search.yaml\n")
+	fmt.Fprintf(os.Stderr, "\nFlags:\n")
 
 	flag.PrintDefaults()
 }
@@ -34,6 +37,11 @@ func main() {
 
 	args := flag.Args()
 	if len(args) == 0 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if *clientName == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -71,7 +79,7 @@ func main() {
 
 	ctx := context.Background()
 	g := Generator{}
-	client := "VendorsClient"
+	client := canonize(*clientName)
 
 	if err = g.GenerateClient(client); err != nil {
 		log.Fatalf("couldn't generate client: %v", err)

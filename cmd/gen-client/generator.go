@@ -70,6 +70,7 @@ type Generator struct {
 func (g *Generator) GenerateClient(name string) error {
 	return clientTemplate.Execute(&g.buf, map[string]string{
 		"ClientName": name,
+		"Package":    strings.ToLower(name),
 	})
 }
 

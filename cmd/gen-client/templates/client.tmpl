@@ -1,4 +1,4 @@
-package vendorsearch
+package {{ .Package }}
 
 import (
 	"bytes"
@@ -10,8 +10,20 @@ import (
 	"net/url"
 )
 
+// New{{ .ClientName }} creates a new {{ .ClientName }} http client.
+func New{{ .ClientName }} (baseurl string) (*{{ .ClientName }}, error) {
+	parsed, err := url.Parse(baseurl)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse base url: %w", err)
+	}
+
+	return &{{ .ClientName }}{
+		baseURL: parsed,
+		httpClient: http.DefaultClient,
+	}, nil
+}
+
 type {{ .ClientName }} struct {
   baseURL *url.URL
   httpClient *http.Client
 }
-
