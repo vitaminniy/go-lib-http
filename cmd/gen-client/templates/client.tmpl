@@ -1,7 +1,7 @@
 package {{ .Package }}
 
 import (
-	_ "bytes"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"net/url"
 )
+
+// This is needed to have bytes imported when non-body requests are generated.
+var _ = bytes.Buffer{}
 
 // New{{ .ClientName }} creates a new {{ .ClientName }} http client.
 func New{{ .ClientName }} (baseurl string) (*{{ .ClientName }}, error) {
