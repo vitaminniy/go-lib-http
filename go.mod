@@ -1,4 +1,4 @@
-module github.com/HungerStation/go-lib-http
+module github.com/vitaminniy/go-lib-http
 
 go 1.22.3
 
