@@ -40,6 +40,13 @@ func WithSnapshot(snapshot *config.Snapshot) Option {
 	}
 }
 
+// WithTransport overrides the default http client transport.
+func WithTransport(transport http.RoundTripper) Option {
+	return func(cl *{{ .ClientName }}) {
+		cl.httpClient.Transport = transport
+	}
+}
+
 // New{{ .ClientName }} creates a new {{ .ClientName }} http client.
 func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, error) {
 	parsed, err := url.Parse(baseurl)
@@ -49,7 +56,7 @@ func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, 
 
 	cli := &{{ .ClientName }}{
 		baseURL:	parsed,
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{},
 		snapshot:	config.NewSnapshot(DefaultServiceConfig),
 	}
 
