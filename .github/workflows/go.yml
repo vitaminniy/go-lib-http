@@ -26,3 +26,7 @@ jobs:
 
     - name: Test
       run: make test
+
+    - name: Build Examples
+      run: make build-examples
+

@@ -27,6 +27,7 @@ type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
 }
+
 type MessagesResponseBody struct {
 	Messages []Message `json:"messages"`
 }
@@ -100,4 +101,3 @@ func (cl *MessageService) GETApiV1Messages(
 
 	return nil, fmt.Errorf("unhandled response code: %d", resp.StatusCode)
 }
-

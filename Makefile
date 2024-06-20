@@ -33,3 +33,18 @@ test-unit: ## runs unit tests
 test-unit:
 	go test -race ./...
 .PHONY: test-unit
+
+
+EXAMPLES = $(wildcard examples/*)
+
+generate-examples: ## generates examples
+generate-examples: install-gen-client
+	@for example in $(EXAMPLES); do \
+		$(MAKE) -C $$example generate; \
+	done
+.PHONY: generate-examples
+
+build-examples: ## builds examples
+build-examples: generate-examples
+	go build -v ./examples/...
+.PHONY: build-examples
