@@ -8,27 +8,69 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/vitaminniy/go-lib-http/config"
+	"github.com/vitaminniy/go-lib-http/retry"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
 var _ = bytes.Buffer{}
 
+// DefaultServiceConfig is a default configuration for the MessageService.
+var DefaultServiceConfig = config.ServiceConfig{
+	Default: config.QOS{
+		Timeout: 1 * time.Second,
+		Retry: retry.Config{
+			Attempts: 2,
+			Backoff:  5 * time.Millisecond,
+			Jitter:   10 * time.Millisecond,
+		},
+	},
+}
+
+// Option overrides MessageService creation.
+type Option func(*MessageService)
+
+// WithSnapshot overrides the default snapshot.
+func WithSnapshot(snapshot *config.Snapshot) Option {
+	return func(cl *MessageService) {
+		cl.snapshot = snapshot
+	}
+}
+
 // NewMessageService creates a new MessageService http client.
-func NewMessageService(baseurl string) (*MessageService, error) {
+func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) {
 	parsed, err := url.Parse(baseurl)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse base url: %w", err)
 	}
 
-	return &MessageService{
+	cli := &MessageService{
 		baseURL:    parsed,
 		httpClient: http.DefaultClient,
-	}, nil
+		snapshot:   config.NewSnapshot(DefaultServiceConfig),
+	}
+
+	for _, opt := range opts {
+		opt(cli)
+	}
+
+	return cli, nil
 }
 
 type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
+	snapshot   *config.Snapshot
+}
+
+func (cl *MessageService) qos(name string) config.QOS {
+	if cl.snapshot == nil {
+		return config.QOS{}
+	}
+
+	return cl.snapshot.QOS(name)
 }
 
 type MessageRequestBody struct {
@@ -60,6 +102,32 @@ func (cl *MessageService) POSTApiV1Message(
 	ctx context.Context,
 	request *POSTApiV1MessageRequest,
 ) (*POSTApiV1MessageResponse, error) {
+	qos := cl.qos("POST /api/v1/message")
+
+	var response *POSTApiV1MessageResponse
+
+	err := retry.OnError(ctx, qos.Retry, func(ctx context.Context) error {
+		var err error
+
+		response, err = cl.doPOSTApiV1Message(ctx, qos, request)
+
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not request: %w", err)
+	}
+
+	return response, nil
+}
+
+func (cl *MessageService) doPOSTApiV1Message(
+	ctx context.Context,
+	qos config.QOS,
+	request *POSTApiV1MessageRequest,
+) (*POSTApiV1MessageResponse, error) {
+	ctx, cancel := qos.Context(ctx)
+	defer cancel()
+
 	url := cl.baseURL.JoinPath("/api/v1/message").String()
 
 	body := &bytes.Buffer{}
