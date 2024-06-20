@@ -21,10 +21,10 @@ make help
 - [ ] Handle inline-defined properties
 - [x] Add client constructor
 - [ ] Add QOS
-    - [ ] Shapshot config storage
-    - [ ] QOS config
+    - [x] Shapshot config storage
+    - [x] QOS config
     - [ ] CircuitBreaker creation
-    - [ ] Handle retries
+    - [x] Handle retries
     - [ ] Add request hedging support
 - [ ] Handle url path params
 - [ ] Handle url query params
