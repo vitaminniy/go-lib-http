@@ -21,7 +21,7 @@ var clientName = flag.String("client-name", "", "name of the generated client; n
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: go-http-gen [options] <input-file>\n")
-	fmt.Fprintf(os.Stderr, "\tgo-http-gen -client-name VendorsClient testdata/vendor-search.yaml\n")
+	fmt.Fprintf(os.Stderr, "\tgo-http-gen -client-name ExampleService spec.yaml\n")
 	fmt.Fprintf(os.Stderr, "\nFlags:\n")
 
 	flag.PrintDefaults()
