@@ -67,10 +67,11 @@ type Generator struct {
 	buf bytes.Buffer
 }
 
-func (g *Generator) GenerateClient(name string) error {
+func (g *Generator) GenerateClient(name string, args []string) error {
 	return clientTemplate.Execute(&g.buf, map[string]string{
 		"ClientName": name,
 		"Package":    strings.ToLower(name),
+		"CodeGen":    strings.Join(args, " "),
 	})
 }
 
