@@ -9,9 +9,12 @@ type {{ .Request.Name }} struct {
 }
 
 type {{ .Response.Name }} struct {
+	Headers map[string][]string
 
+	{{ range .Response.Codes }}
+	Body{{ .Code }} *{{ .Name }}
+	{{ end }}
 }
-
 
 func (cl *{{ .Client }}) {{ .Method }}(
 	ctx context.Context,
@@ -33,7 +36,7 @@ func (cl *{{ .Client }}) {{ .Method }}(
 	req.Header.Add("Content-Type", "application/json")
 
 	for key, value := range request.Headers {
-		req.Header.Add(key, value)
+		req.Header.Set(key, value)
 	}
 
 	resp, err := cl.httpClient.Do(req)
@@ -51,6 +54,23 @@ func (cl *{{ .Client }}) {{ .Method }}(
 		return nil, fmt.Errorf("got response with status %d: %q", resp.StatusCode, string(raw))
 	}
 
-	return nil, errors.New("not implemented")
+	response := &{{ .Response.Name }}{
+		Headers: resp.Header,
+	}
+
+	{{ range .Response.Codes }}
+	if resp.StatusCode == {{ .Code }} {
+		var body {{ .Name }}
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			return nil, fmt.Errorf("could not decode response [%d]: %w", resp.StatusCode, err)
+		}
+
+		response.Body{{ .Code }} = &body
+
+		return response, nil
+	}
+	{{ end }}
+
+	return nil, fmt.Errorf("unhandled response code: %d", resp.StatusCode)
 }
 

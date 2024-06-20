@@ -8,6 +8,7 @@ import (
 	"go/format"
 	"log"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -47,6 +48,12 @@ type RequestBody struct {
 }
 
 type Response struct {
+	Name  string
+	Codes []ResponseCode
+}
+
+type ResponseCode struct {
+	Code int
 	Name string
 }
 
@@ -127,14 +134,43 @@ func (g *Generator) GenerateMethod(
 		request.Body = reqbody
 	}
 
+	response := Response{
+		Name: method + canonizePath(path) + "Response",
+	}
+
+	if op.Responses != nil {
+		codes := orderedmap.Iterate(ctx, op.Responses.Codes)
+		for code := range codes {
+			httpcode, err := strconv.ParseInt(code.Key(), 10, 64)
+			if err != nil {
+				return fmt.Errorf("could not parse code %q: %q: %w", path, code.Key(), err)
+			}
+
+			if httpcode >= 300 {
+				continue
+			}
+
+			schema := code.Value()
+			media := schema.Content.GetOrZero(contentType)
+			if media == nil || media.Schema == nil {
+				return fmt.Errorf("invalid response schema %q %q: %w", path, code.Key(), err)
+			}
+
+			reference := media.Schema.GetReference()
+			splits := strings.Split(reference, "/")
+
+			response.Codes = append(response.Codes, ResponseCode{
+				Code: int(httpcode),
+				Name: splits[len(splits)-1],
+			})
+		}
+	}
+
 	parameters := make(map[string]any)
 	parameters["Client"] = client
 	parameters["Path"] = path
 	parameters["Method"] = method + canonizePath(path)
-	parameters["Response"] = Response{
-		Name: method + canonizePath(path) + "Response",
-	}
-
+	parameters["Response"] = response
 	parameters["Request"] = request
 
 	return postRequestTemplate.Execute(&g.buf, parameters)
