@@ -20,6 +20,32 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	ctx context.Context,
 	request *{{ .Request.Name }},
 ) (*{{ .Response.Name }}, error) {
+	qos := cl.qos("{{ .Method }} {{ .Path }}")
+
+	var response *{{ .Response.Name }}
+
+	err := retry.OnError(ctx, qos.Retry, func(ctx context.Context) error {
+		var err error
+
+		response, err = cl.do{{ .Name }}(ctx, qos, request)
+
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not request: %w", err)
+	}
+	
+	return response, nil
+}
+
+func (cl *{{ .Client }}) do{{ .Name }}(
+	ctx context.Context,
+	qos config.QOS,
+	request *{{ .Request.Name }},
+) (*{{ .Response.Name }}, error) {
+	ctx, cancel := qos.Context(ctx)
+	defer cancel()
+
 	url := cl.baseURL.JoinPath("{{ .Path }}").String()
 
 	{{ if .Request.Body }}

@@ -8,26 +8,67 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/vitaminniy/go-lib-http/config"
+	"github.com/vitaminniy/go-lib-http/retry"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
 var _ = bytes.Buffer{}
 
+// DefaultServiceConfig is a default configuration for the {{ .ClientName }}.
+var DefaultServiceConfig = config.ServiceConfig{
+	Default: config.QOS{
+		Timeout: 1 * time.Second,
+		Retry: retry.Config{
+			Attempts: 2,
+			Backoff: 5 * time.Millisecond,
+			Jitter:  10 * time.Millisecond,
+		},
+	},
+}
+
+// Option overrides {{ .ClientName }} creation.
+type Option func(*{{ .ClientName }})
+
+// WithSnapshot overrides the default snapshot.
+func WithSnapshot(snapshot *config.Snapshot) Option {
+	return func(cl *{{ .ClientName }}) {
+		cl.snapshot = snapshot
+	}
+}
+
 // New{{ .ClientName }} creates a new {{ .ClientName }} http client.
-func New{{ .ClientName }} (baseurl string) (*{{ .ClientName }}, error) {
+func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, error) {
 	parsed, err := url.Parse(baseurl)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse base url: %w", err)
 	}
 
-	return &{{ .ClientName }}{
-		baseURL: parsed,
+	cli := &{{ .ClientName }}{
+		baseURL:	parsed,
 		httpClient: http.DefaultClient,
-	}, nil
+		snapshot:	config.NewSnapshot(DefaultServiceConfig),
+	}
+
+	for _, opt := range opts {
+		opt(cli)
+	}
+
+	return cli, nil
 }
 
 type {{ .ClientName }} struct {
   baseURL *url.URL
   httpClient *http.Client
+  snapshot *config.Snapshot
 }
 
+func (cl *{{ .ClientName }}) qos(name string) config.QOS {
+	if cl.snapshot == nil {
+		return config.QOS{}
+	}
+
+	return cl.snapshot.QOS(name)
+}
