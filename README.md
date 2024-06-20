@@ -24,6 +24,8 @@ make help
     - [ ] Shapshot config storage
     - [ ] QOS config
     - [ ] CircuitBreaker creation
+    - [ ] Handle retries
+    - [ ] Add request hedging support
 - [ ] Handle url path params
 - [ ] Handle url query params
 - [ ] Handle `HEAD` method
