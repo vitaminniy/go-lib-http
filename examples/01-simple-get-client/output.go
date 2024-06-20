@@ -1,7 +1,7 @@
 package messageservice
 
 import (
-	_ "bytes"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"net/url"
 )
+
+// This is needed to have bytes imported when non-body requests are generated.
+var _ = bytes.Buffer{}
 
 // NewMessageService creates a new MessageService http client.
 func NewMessageService(baseurl string) (*MessageService, error) {
@@ -101,3 +104,4 @@ func (cl *MessageService) GETApiV1Messages(
 
 	return nil, fmt.Errorf("unhandled response code: %d", resp.StatusCode)
 }
+
