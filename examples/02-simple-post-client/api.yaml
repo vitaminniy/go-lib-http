@@ -1,0 +1,49 @@
+openapi: 3.0.0
+info:
+  title: Example Service
+  version: 1.0.0
+
+paths:
+  /api/v1/message:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequestBody'
+      responses:
+        201:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponseBody'
+
+components:
+  schemas:
+    MessageRequestBody:
+      type: object
+      required:
+        - sender_id
+        - text
+      properties:
+        sender_id:
+          type: string
+        text:
+          type: string
+        meta:
+          type: string
+      additionalProperties: false
+
+    MessageResponseBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        meta:
+          type: string
+      additionalProperties: false
+
