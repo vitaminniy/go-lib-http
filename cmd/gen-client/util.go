@@ -5,7 +5,7 @@ import (
 	"unicode"
 )
 
-func canonizePath(path string) string {
+func canonize(path string) string {
 	sb := &strings.Builder{}
 	sb.Grow(len(path))
 

@@ -115,12 +115,12 @@ func (g *Generator) GenerateMethod(
 	}
 
 	request := Request{
-		Name: method + canonizePath(path) + "Request",
+		Name: method + canonize(path) + "Request",
 	}
 
 	if op.RequestBody != nil {
 		reqbody := &RequestBody{}
-		reqbody.Name = method + canonizePath(path) + "RequestBody"
+		reqbody.Name = method + canonize(path) + "RequestBody"
 		reqbody.Required = resolveptr(op.RequestBody.Required)
 
 		media := op.RequestBody.Content.GetOrZero(contentType)
@@ -135,7 +135,7 @@ func (g *Generator) GenerateMethod(
 	}
 
 	response := Response{
-		Name: method + canonizePath(path) + "Response",
+		Name: method + canonize(path) + "Response",
 	}
 
 	if op.Responses != nil {
@@ -169,7 +169,7 @@ func (g *Generator) GenerateMethod(
 	parameters := make(map[string]any)
 	parameters["Client"] = client
 	parameters["Path"] = path
-	parameters["Name"] = method + canonizePath(path)
+	parameters["Name"] = method + canonize(path)
 	parameters["Method"] = method
 	parameters["Response"] = response
 	parameters["Request"] = request
@@ -226,7 +226,7 @@ func collectProperties(
 			// TODO(max): generate struct for inline property.
 			reference := value.ParentProxy.GetReference()
 			if reference == "" {
-				reference = parentName + canonizePath(key)
+				reference = parentName + canonize(key)
 			}
 
 			splits := strings.Split(reference, "/")
@@ -238,7 +238,7 @@ func collectProperties(
 
 			atyps := itemsSchema.Type
 			if len(atyps) == 0 {
-				log.Fatalf("invalid schema typ: %q", canonizePath(key))
+				log.Fatalf("invalid schema typ: %q", canonize(key))
 			}
 
 			atyp := atyps[0]
@@ -248,7 +248,7 @@ func collectProperties(
 			if atyp == "object" {
 				reference := itemsSchema.ParentProxy.GetReference()
 				if reference == "" {
-					reference = parentName + canonizePath(key)
+					reference = parentName + canonize(key)
 				}
 
 				splits := strings.Split(reference, "/")
@@ -262,7 +262,7 @@ func collectProperties(
 		}
 
 		result = append(result, Property{
-			Name: canonizePath(key),
+			Name: canonize(key),
 			Type: typ,
 			Tag:  tag,
 		})
