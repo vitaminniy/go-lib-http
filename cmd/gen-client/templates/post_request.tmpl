@@ -8,14 +8,6 @@ type {{ .Request.Name }} struct {
 	{{- end -}}
 }
 
-{{ with .Request.Body }}
-type {{ .Name }} struct {
-	{{ range .Properties }}
-	{{ .Name }} {{ .Type }} `json:"{{ .Tag }}"`
-	{{- end -}}
-}
-{{ end }}
-
 type {{ .Response.Name }} struct {
 
 }

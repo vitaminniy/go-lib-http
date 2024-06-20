@@ -6,10 +6,12 @@ import (
 	_ "embed"
 	"fmt"
 	"go/format"
+	"log"
 	"slices"
 	"strings"
 	"text/template"
 
+	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 )
@@ -20,6 +22,10 @@ var (
 	//go:embed templates/client.tmpl
 	rawClientTemplate string
 	clientTemplate    = mustparse("client", rawClientTemplate)
+
+	//go:embed templates/components.tmpl
+	rawComponentsTemplate string
+	componentsTemplate    = mustparse("components", rawComponentsTemplate)
 
 	//go:embed templates/post_request.tmpl
 	rawPostRequestTemplate string
@@ -36,9 +42,8 @@ type Request struct {
 }
 
 type RequestBody struct {
-	Name       string
-	Required   bool
-	Properties []Property
+	Name     string
+	Required bool
 }
 
 type Response struct {
@@ -61,6 +66,38 @@ func (g *Generator) GenerateClient(name string) error {
 	})
 }
 
+func (g *Generator) GenerateComponents(
+	ctx context.Context,
+	components *v3.Components,
+) error {
+	schemas := orderedmap.Iterate(ctx, components.Schemas)
+	for proxy := range schemas {
+		schema := proxy.Value().Schema()
+
+		if len(schema.Type) == 0 {
+			log.Printf("invalid schema %q", proxy.Key())
+			continue
+		}
+
+		typ := schema.Type[0]
+		if typ != "object" {
+			continue
+		}
+
+		properties := collectProperties(ctx, schema, "")
+
+		err := componentsTemplate.Execute(&g.buf, map[string]any{
+			"Name":       proxy.Key(),
+			"Properties": properties,
+		})
+		if err != nil {
+			return fmt.Errorf("could not render %q: %w", proxy.Key(), err)
+		}
+	}
+
+	return nil
+}
+
 func (g *Generator) GenerateMethod(
 	ctx context.Context,
 	client, path, method string,
@@ -80,7 +117,12 @@ func (g *Generator) GenerateMethod(
 		reqbody.Required = resolveptr(op.RequestBody.Required)
 
 		media := op.RequestBody.Content.GetOrZero(contentType)
-		reqbody.Properties = collectProperties(ctx, media, reqbody.Name)
+		if media != nil && media.Schema != nil {
+			reference := media.Schema.GetReference()
+			splits := strings.Split(reference, "/")
+
+			reqbody.Name = splits[len(splits)-1]
+		}
 
 		request.Body = reqbody
 	}
@@ -119,15 +161,9 @@ func resolveptr[T any](ptr *T) T {
 
 func collectProperties(
 	ctx context.Context,
-	media *v3.MediaType,
+	schema *base.Schema,
 	parentName string,
 ) []Property {
-	if media == nil || media.Schema == nil {
-		return nil
-	}
-
-	schema := media.Schema.Schema()
-
 	result := make([]Property, 0)
 	properties := orderedmap.Iterate(ctx, schema.Properties)
 
@@ -145,6 +181,8 @@ func collectProperties(
 			typ = "string"
 		case "boolean":
 			typ = "bool"
+		case "number":
+			typ = "float64"
 		case "object":
 			// NOTE(max): it's a hack and might panic; please do something
 			// about it.
@@ -159,15 +197,26 @@ func collectProperties(
 		case "array":
 			// NOTE(max): it's a hack and might panic; please do something
 			// about it.
-			// TODO(max): generate struct for inline property.
 			itemsSchema := value.Items.A.Schema()
-			reference := itemsSchema.ParentProxy.GetReference()
-			if reference == "" {
-				reference = parentName + canonizePath(key)
+
+			atyps := itemsSchema.Type
+			if len(atyps) == 0 {
+				log.Fatalf("invalid schema typ: %q", canonizePath(key))
 			}
 
-			splits := strings.Split(reference, "/")
-			typ = "[]" + splits[len(splits)-1]
+			atyp := atyps[0]
+
+			typ = "[]" + atyp
+
+			if atyp == "object" {
+				reference := itemsSchema.ParentProxy.GetReference()
+				if reference == "" {
+					reference = parentName + canonizePath(key)
+				}
+
+				splits := strings.Split(reference, "/")
+				typ = "[]" + splits[len(splits)-1]
+			}
 		}
 
 		tag := key

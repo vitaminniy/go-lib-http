@@ -1,0 +1,6 @@
+type {{ .Name }} struct {
+	{{ range .Properties }}
+	{{ .Name }} {{ .Type }} `json:"{{ .Tag }}"`
+	{{- end -}}
+}
+

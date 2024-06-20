@@ -77,6 +77,10 @@ func main() {
 		log.Fatalf("couldn't generate client: %v", err)
 	}
 
+	if err = g.GenerateComponents(ctx, model.Model.Components); err != nil {
+		log.Fatalf("couldn't generate components: %v", err)
+	}
+
 	pairs := orderedmap.Iterate(ctx, model.Model.Paths.PathItems)
 	for pair := range pairs {
 		path := pair.Key()
