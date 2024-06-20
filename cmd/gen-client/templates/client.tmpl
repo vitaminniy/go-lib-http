@@ -1,3 +1,16 @@
+package vendorsearch
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+)
+
 type {{ .ClientName }} struct {
   baseURL *url.URL
   httpClient *http.Client

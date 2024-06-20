@@ -1,29 +1,20 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"log"
+	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	"github.com/pb33f/libopenapi/orderedmap"
-)
-
-var (
-	//go:embed templates/client.tmpl
-	rawClientTemplate string
-	clientTemplate    = must(template.New("client").Parse(rawClientTemplate))
-
-	//go:embed templates/post_request.tmpl
-	rawPostRequestTemplate string
-	postRequestTemplate    = must(template.New("post_request").Parse(rawPostRequestTemplate))
 )
 
 func usage() {
@@ -47,12 +38,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	raw, err := os.ReadFile(args[0])
+	fname, err := filepath.Abs(args[0])
+	if err != nil {
+		log.Fatalf("could not resolve file name: %v", err)
+	}
+
+	raw, err := os.ReadFile(fname)
 	if err != nil {
 		log.Fatalf("could not read file %q: %v", args[0], err)
 	}
 
 	cfg := datamodel.NewDocumentConfiguration()
+	cfg.BasePath = path.Dir(fname)
+	cfg.AllowFileReferences = true
+	cfg.AllowRemoteReferences = true
+	cfg.ExtractRefsSequentially = true
+	cfg.BundleInlineRefs = true
 
 	doc, err := libopenapi.NewDocumentWithConfiguration(raw, cfg)
 	if err != nil {
@@ -68,32 +69,26 @@ func main() {
 		log.Fatalf("document %q doesn't contain paths", args[0])
 	}
 
-	pairs := orderedmap.Iterate(context.Background(), model.Model.Paths.PathItems)
+	ctx := context.Background()
+	g := Generator{}
+	client := "VendorsClient"
+
+	if err = g.GenerateClient(client); err != nil {
+		log.Fatalf("couldn't generate client: %v", err)
+	}
+
+	pairs := orderedmap.Iterate(ctx, model.Model.Paths.PathItems)
 	for pair := range pairs {
-		path := canonizePath(pair.Key())
+		path := pair.Key()
 		pitem := pair.Value()
 
-		if pitem == nil {
-			log.Printf("%q doesn't have items", path)
-			continue
-		}
-
-		var buf bytes.Buffer
-		clientTemplate.Execute(&buf, map[string]string{
-			"ClientName": "VendorsClient",
-		})
-
-		if pitem.Post != nil {
-			postRequestTemplate.Execute(&buf, map[string]string{
-				"ClientName": "VendorsClient",
-				"Name":       fmt.Sprintf("Post%s", path),
-				"Path":       pair.Key(),
-				"Request":    "Post" + path + "Request",
-				"Response":   "Post" + path + "Response",
-			})
-
-		}
-
-		fmt.Println(buf.String())
+		g.GenerateMethod(ctx, client, path, http.MethodPost, pitem.Post)
 	}
+
+	source, err := g.Source()
+	if err != nil {
+		log.Fatalf("could not generate client: %v", err)
+	}
+
+	fmt.Println(string(source))
 }

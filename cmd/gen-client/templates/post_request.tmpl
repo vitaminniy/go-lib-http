@@ -1,16 +1,63 @@
-func (cl *{{ .ClientName }}) {{ .Name }}(ctx context.Context, request *{{ .Request }}) (*{{ .Response }}, error) {
+type {{ .Request.Name }} struct {
+	// Headers is a list of additional headers.
+	Headers map[string]string
+
+	{{ with .Request.Body }}
+	// Body is a request body.
+	Body *{{ .Name }}
+	{{- end -}}
+}
+
+{{ with .Request.Body }}
+type {{ .Name }} struct {
+	{{ range .Properties }}
+	{{ .Name }} {{ .Type }} `json:"{{ .Tag }}"`
+	{{- end -}}
+}
+{{ end }}
+
+type {{ .Response.Name }} struct {
+
+}
+
+
+func (cl *{{ .Client }}) {{ .Method }}(
+	ctx context.Context,
+	request *{{ .Request.Name }},
+) (*{{ .Response.Name }}, error) {
 	url := cl.baseURL.JoinPath("{{ .Path }}").String()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(&request.Body); err != nil {
+		return nil, fmt.Errorf("could not encode request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &body)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
 
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+
+	for key, value := range request.Headers {
+		req.Header.Add(key, value)
+	}
+
 	resp, err := cl.httpClient.Do(req)
 	if err != nil {
-
+		return nil, fmt.Errorf("could not do http request: %w", err)
 	}
-	_ = req
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("could not read response with status %d: %w", resp.StatusCode, err)
+		}
+
+		return nil, fmt.Errorf("got response with status %d: %q", resp.StatusCode, string(raw))
+	}
 
 	return nil, errors.New("not implemented")
 }

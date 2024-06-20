@@ -9,7 +9,7 @@ func canonizePath(path string) string {
 	sb := &strings.Builder{}
 	sb.Grow(len(path))
 
-	nextUpper := false
+	nextUpper := true
 
 	for _, r := range path {
 		if nextUpper {
@@ -17,7 +17,7 @@ func canonizePath(path string) string {
 			nextUpper = false
 		}
 
-		if r == '-' || r == '/' {
+		if r == '-' || r == '/' || r == '_' {
 			nextUpper = true
 			continue
 		}
