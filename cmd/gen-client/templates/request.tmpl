@@ -16,18 +16,23 @@ type {{ .Response.Name }} struct {
 	{{ end }}
 }
 
-func (cl *{{ .Client }}) {{ .Method }}(
+func (cl *{{ .Client }}) {{ .Name }}(
 	ctx context.Context,
 	request *{{ .Request.Name }},
 ) (*{{ .Response.Name }}, error) {
 	url := cl.baseURL.JoinPath("{{ .Path }}").String()
 
-	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(&request.Body); err != nil {
+	{{ if .Request.Body }}
+	body := &bytes.Buffer{}
+	if err := json.NewEncoder(body).Encode(&request.Body); err != nil {
 		return nil, fmt.Errorf("could not encode request body: %w", err)
 	}
+	{{ else }}
+	var body io.Reader
+	{{ end }}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &body)
+
+	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url, body)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}

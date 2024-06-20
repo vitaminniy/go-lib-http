@@ -28,9 +28,9 @@ var (
 	rawComponentsTemplate string
 	componentsTemplate    = mustparse("components", rawComponentsTemplate)
 
-	//go:embed templates/post_request.tmpl
-	rawPostRequestTemplate string
-	postRequestTemplate    = mustparse("post_request", rawPostRequestTemplate)
+	//go:embed templates/request.tmpl
+	rawRequestTemplate string
+	requestTemplate    = mustparse("request", rawRequestTemplate)
 )
 
 func mustparse(name, tmpl string) *template.Template {
@@ -169,11 +169,12 @@ func (g *Generator) GenerateMethod(
 	parameters := make(map[string]any)
 	parameters["Client"] = client
 	parameters["Path"] = path
-	parameters["Method"] = method + canonizePath(path)
+	parameters["Name"] = method + canonizePath(path)
+	parameters["Method"] = method
 	parameters["Response"] = response
 	parameters["Request"] = request
 
-	return postRequestTemplate.Execute(&g.buf, parameters)
+	return requestTemplate.Execute(&g.buf, parameters)
 }
 
 func (g *Generator) Source() ([]byte, error) {

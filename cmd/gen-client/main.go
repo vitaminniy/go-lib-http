@@ -86,6 +86,7 @@ func main() {
 		path := pair.Key()
 		pitem := pair.Value()
 
+		g.GenerateMethod(ctx, client, path, http.MethodGet, pitem.Get)
 		g.GenerateMethod(ctx, client, path, http.MethodPost, pitem.Post)
 	}
 
