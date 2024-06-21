@@ -9,36 +9,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"time"
-
-	"github.com/vitaminniy/go-lib-http/config"
-	"github.com/vitaminniy/go-lib-http/retry"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
 var _ = bytes.Buffer{}
 
-// DefaultServiceConfig is a default configuration for the {{ .ClientName }}.
-var DefaultServiceConfig = config.ServiceConfig{
-	Default: config.QOS{
-		Timeout: 1 * time.Second,
-		Retry: retry.Config{
-			Attempts: 2,
-			Backoff: 5 * time.Millisecond,
-			Jitter:  10 * time.Millisecond,
-		},
-	},
-}
-
 // Option overrides {{ .ClientName }} creation.
 type Option func(*{{ .ClientName }})
-
-// WithSnapshot overrides the default snapshot.
-func WithSnapshot(snapshot *config.Snapshot) Option {
-	return func(cl *{{ .ClientName }}) {
-		cl.snapshot = snapshot
-	}
-}
 
 // WithTransport overrides the default http client transport.
 func WithTransport(transport http.RoundTripper) Option {
@@ -57,7 +34,6 @@ func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, 
 	cli := &{{ .ClientName }}{
 		baseURL:	parsed,
 		httpClient: &http.Client{},
-		snapshot:	config.NewSnapshot(DefaultServiceConfig),
 	}
 
 	for _, opt := range opts {
@@ -70,13 +46,4 @@ func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, 
 type {{ .ClientName }} struct {
   baseURL *url.URL
   httpClient *http.Client
-  snapshot *config.Snapshot
-}
-
-func (cl *{{ .ClientName }}) qos(name string) config.QOS {
-	if cl.snapshot == nil {
-		return config.QOS{}
-	}
-
-	return cl.snapshot.QOS(name)
 }
