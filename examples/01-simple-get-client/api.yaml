@@ -6,6 +6,10 @@ info:
 paths:
   /api/v1/messages:
     get:
+      parameters:
+        - $ref: "#/components/parameters/UserAgent"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/SenderId"
       responses:
         200:
           description: OK
@@ -15,6 +19,34 @@ paths:
                 $ref: '#/components/schemas/MessagesResponseBody'
 
 components:
+  parameters:
+    UserAgent:
+      in: header
+      name: User-Agent
+      description: >
+        The User-Agent request header is a characteristic string that lets
+        servers and network peers identify the application, operating system,
+        vendor, and/or version of the requesting user agent.
+      required: true
+      schema:
+        type: string
+
+    Limit:
+      in: query
+      name: limit
+      description: Request at max this number of messages.
+      required: true
+      schema:
+        type: integer
+
+    SenderId:
+      in: query
+      name: sender_id
+      description: Requests messages only from this sender.
+      required: false
+      schema:
+        type: string
+
   schemas:
     MessagesResponseBody:
       type: object
