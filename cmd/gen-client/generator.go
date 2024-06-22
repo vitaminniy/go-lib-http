@@ -37,9 +37,32 @@ func mustparse(name, tmpl string) *template.Template {
 	return must(template.New(name).Parse(tmpl))
 }
 
-type Request struct {
+type Header struct {
 	Name string
-	Body *RequestBody
+	Key  string
+}
+
+type QueryParam struct {
+	Name     string
+	Key      string
+	Required bool
+}
+
+type Value struct {
+	Name     string
+	Key      string
+	Required bool
+}
+
+type QueryParams struct {
+	Values []Value
+}
+
+type Request struct {
+	Name        string
+	Headers     []Header
+	QueryParams *QueryParams
+	Body        *RequestBody
 }
 
 type RequestBody struct {
@@ -118,6 +141,30 @@ func (g *Generator) GenerateMethod(
 
 	request := Request{
 		Name: method + canonize(path) + "Request",
+	}
+
+	queryparams := make([]Value, 0)
+
+	for _, parameter := range op.Parameters {
+		switch parameter.In {
+		case "header":
+			request.Headers = append(request.Headers, Header{
+				Name: canonize(parameter.Name),
+				Key:  parameter.Name,
+			})
+		case "query":
+			queryparams = append(queryparams, Value{
+				Name:     canonize(parameter.Name),
+				Key:      parameter.Name,
+				Required: resolveptr(parameter.Required),
+			})
+		}
+	}
+
+	if len(queryparams) > 0 {
+		request.QueryParams = &QueryParams{
+			Values: queryparams,
+		}
 	}
 
 	if op.RequestBody != nil {

@@ -1,6 +1,17 @@
 type {{ .Request.Name }} struct {
+	{{- range .Request.Headers }}
+	// Header{{ .Name }} is "{{ .Key }}" header value.
+	Header{{ .Name }} string
+	{{- end }}
 	// Headers is a list of additional headers.
 	Headers map[string]string
+
+	{{ with .Request.QueryParams }}
+	{{ range .Values }}
+	// Query{{ .Name }} is "{{ .Key }}" query parameter.
+	Query{{ .Name }} {{ if .Required }} string {{ else }} *string {{ end }}
+	{{- end }}
+	{{- end }}
 
 	{{ with .Request.Body }}
 	// Body is a request body.
@@ -20,7 +31,27 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	ctx context.Context,
 	request *{{ .Request.Name }},
 ) (*{{ .Response.Name }}, error) {
-	url := cl.baseURL.JoinPath("{{ .Path }}").String()
+	url := cl.baseURL.JoinPath("{{ .Path }}")
+
+	{{- with .Request.QueryParams }}
+	{
+		query := url.Query()
+
+		{{ range .Values }}
+
+		{{ if .Required }}
+		query.Add("{{ .Key }}", request.Query{{ .Name }})
+		{{ else }}
+		if request.Query{{ .Name }} != nil {
+			query.Add("{{ .Key }}", *request.Query{{ .Name }})
+		}
+		{{ end }}
+
+		{{ end }}
+
+		url.RawQuery = query.Encode()
+	}
+	{{ end }}
 
 	{{ if .Request.Body }}
 	body := &bytes.Buffer{}
@@ -32,13 +63,17 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	{{ end }}
 
 
-	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url, body)
+	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url.String(), body)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
 
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
+
+	{{ range .Request.Headers }}
+	req.Header.Add("{{ .Key }}", request.Header{{ .Name }})
+	{{- end }}
 
 	for key, value := range request.Headers {
 		req.Header.Set(key, value)
