@@ -37,15 +37,15 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	{
 		query := url.Query()
 
-		{{ range .Values }}
+		{{ range .Values -}}
 
-		{{ if .Required }}
+		{{- if .Required -}}
 		query.Add("{{ .Key }}", request.Query{{ .Name }})
 		{{ else }}
 		if request.Query{{ .Name }} != nil {
 			query.Add("{{ .Key }}", *request.Query{{ .Name }})
 		}
-		{{ end }}
+		{{- end -}}
 
 		{{ end }}
 
@@ -58,18 +58,21 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	if err := json.NewEncoder(body).Encode(&request.Body); err != nil {
 		return nil, fmt.Errorf("could not encode request body: %w", err)
 	}
-	{{ else }}
-	var body io.Reader
-	{{ end }}
-
 
 	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url.String(), body)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
 
-	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
+	{{ else }}
+	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare request: %w", err)
+	}
+	{{ end }}
+
+	req.Header.Add("Accept", "application/json")
 
 	{{ range .Request.Headers }}
 	req.Header.Add("{{ .Key }}", request.Header{{ .Name }})
