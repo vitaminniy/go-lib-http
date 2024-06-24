@@ -47,6 +47,7 @@ type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
 }
+
 type MessageRequestBody struct {
 	SenderId string `json:"sender_id"`
 	Text     string `json:"text"`
@@ -88,8 +89,9 @@ func (cl *MessageService) POSTApiV1Message(
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
 
-	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
+
+	req.Header.Add("Accept", "application/json")
 
 	for key, value := range request.Headers {
 		req.Header.Set(key, value)

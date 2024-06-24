@@ -47,6 +47,7 @@ type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
 }
+
 type MessagesResponseBody struct {
 	Messages []Message `json:"messages"`
 }
@@ -92,15 +93,12 @@ func (cl *MessageService) GETApiV1Messages(
 		url.RawQuery = query.Encode()
 	}
 
-	var body io.Reader
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), body)
+	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
 
 	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
 
 	req.Header.Add("User-Agent", request.HeaderUserAgent)
 
