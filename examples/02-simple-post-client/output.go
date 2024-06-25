@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
@@ -24,6 +25,13 @@ func WithTransport(transport http.RoundTripper) Option {
 	}
 }
 
+// WithTimeout overrides the default http client timeout.
+func WithTimeout(timeout time.Duration) Option {
+	return func(cl *MessageService) {
+		cl.httpClient.Timeout = timeout
+	}
+}
+
 // NewMessageService creates a new MessageService http client.
 func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) {
 	parsed, err := url.Parse(baseurl)
@@ -32,8 +40,10 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 	}
 
 	cli := &MessageService{
-		baseURL:    parsed,
-		httpClient: &http.Client{},
+		baseURL: parsed,
+		httpClient: &http.Client{
+			Timeout: time.Second * 1, // Arbitrary value to avoid hanging forever.
+		},
 	}
 
 	for _, opt := range opts {
