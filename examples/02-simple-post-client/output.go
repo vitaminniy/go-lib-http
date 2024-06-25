@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/vitaminniy/go-lib-http/config"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
@@ -34,10 +32,10 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithSnapshot overrides the default config snapshot.
-func WithSnapshot(snapshot *config.Snapshot[Config]) Option {
+// WithConfigFunc overrides the default config function.
+func WithConfigFunc(configFunc ConfigFunc) Option {
 	return func(cl *MessageService) {
-		cl.snapshot = snapshot
+		cl.configFunc = configFunc
 	}
 }
 
@@ -53,7 +51,6 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 		httpClient: &http.Client{
 			Timeout: time.Second * 1, // Arbitrary value to avoid hanging forever.
 		},
-		snapshot: config.NewSnapshot(DefaultConfig()),
 	}
 
 	for _, opt := range opts {
@@ -66,15 +63,15 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
-	snapshot   *config.Snapshot[Config]
+	configFunc ConfigFunc
 }
 
 func (cl *MessageService) getConfig() Config {
-	if cl.snapshot == nil {
+	if cl.configFunc == nil {
 		return DefaultConfig()
 	}
 
-	return cl.snapshot.Get()
+	return cl.configFunc()
 }
 
 type MessageRequestBody struct {
@@ -88,16 +85,30 @@ type MessageResponseBody struct {
 	Meta string `json:"meta,omitempty"`
 }
 
-// DefaultConfig returns default configuration.
-func DefaultConfig() Config {
-	return Config{
-		POSTApiV1Message: config.QOS{},
-	}
+type QOS struct {
+	Timeout time.Duration
 }
+
+func (q *QOS) context(ctx context.Context) (context.Context, context.CancelFunc) {
+	if q.Timeout == 0 {
+		return ctx, func() {}
+	}
+
+	return context.WithTimeout(ctx, q.Timeout)
+}
+
+type ConfigFunc func() Config
 
 // Config controls service configuration.
 type Config struct {
-	POSTApiV1Message config.QOS
+	POSTApiV1Message QOS
+}
+
+// DefaultConfig returns default configuration.
+func DefaultConfig() Config {
+	return Config{
+		POSTApiV1Message: QOS{},
+	}
 }
 
 type POSTApiV1MessageRequest struct {
@@ -121,7 +132,7 @@ func (cl *MessageService) POSTApiV1Message(
 	url := cl.baseURL.JoinPath("/api/v1/message")
 	cfg := cl.getConfig().POSTApiV1Message
 
-	ctx, cancel := cfg.Context(ctx)
+	ctx, cancel := cfg.context(ctx)
 	defer cancel()
 
 	body := &bytes.Buffer{}
