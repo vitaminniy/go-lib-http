@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go/format"
 	"log"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -27,6 +28,10 @@ var (
 	//go:embed templates/components.tmpl
 	rawComponentsTemplate string
 	componentsTemplate    = mustparse("components", rawComponentsTemplate)
+
+	//go:embed templates/config.tmpl
+	rawConfigTemplate string
+	configTemplate    = mustparse("config", rawConfigTemplate)
 
 	//go:embed templates/request.tmpl
 	rawRequestTemplate string
@@ -130,7 +135,87 @@ func (g *Generator) GenerateComponents(
 	return nil
 }
 
-func (g *Generator) GenerateMethod(
+type Pair[F any, S any] struct {
+	First  F
+	Second S
+}
+
+func (g *Generator) GenerateMethods(
+	ctx context.Context,
+	client string,
+	paths *v3.Paths,
+) error {
+	if paths == nil {
+		return nil
+	}
+
+	pathitems := collectPathItems(ctx, paths)
+	if len(pathitems) == 0 {
+		return nil
+	}
+
+	if err := g.generateConfigs(pathitems); err != nil {
+		return fmt.Errorf("could not generate configs: %w", err)
+	}
+
+	for _, item := range pathitems {
+		if err := g.generateMethod(ctx, client, item.Path, item.Method, item.Op); err != nil {
+			return fmt.Errorf("could not generate method %q: %w", item.Path, err)
+		}
+	}
+
+	return nil
+}
+
+type pathitem struct {
+	Path   string
+	Method string
+	Op     *v3.Operation
+}
+
+func collectPathItems(ctx context.Context, paths *v3.Paths) []pathitem {
+	result := make([]pathitem, 0)
+
+	for pair := range orderedmap.Iterate(ctx, paths.PathItems) {
+		path := pair.Key()
+		pitem := pair.Value()
+
+		result = appendPathItem(result, path, http.MethodHead, pitem.Head)
+		result = appendPathItem(result, path, http.MethodGet, pitem.Get)
+		result = appendPathItem(result, path, http.MethodPut, pitem.Put)
+		result = appendPathItem(result, path, http.MethodPost, pitem.Post)
+		result = appendPathItem(result, path, http.MethodDelete, pitem.Delete)
+	}
+
+	return result
+}
+
+func appendPathItem(dst []pathitem, path, method string, op *v3.Operation) []pathitem {
+	if op == nil {
+		return dst
+	}
+
+	return append(dst, pathitem{
+		Path:   path,
+		Method: method,
+		Op:     op,
+	})
+}
+
+func (g *Generator) generateConfigs(pathItems []pathitem) error {
+	if len(pathItems) == 0 {
+		return nil
+	}
+
+	methods := make([]string, 0, len(pathItems))
+	for _, item := range pathItems {
+		methods = append(methods, item.Method+canonize(item.Path))
+	}
+
+	return configTemplate.Execute(&g.buf, map[string]any{"Methods": methods})
+}
+
+func (g *Generator) generateMethod(
 	ctx context.Context,
 	client, path, method string,
 	op *v3.Operation,

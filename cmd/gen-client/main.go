@@ -7,14 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
-	"github.com/pb33f/libopenapi/orderedmap"
 )
 
 var (
@@ -92,13 +90,8 @@ func main() {
 		log.Fatalf("couldn't generate components: %v", err)
 	}
 
-	pairs := orderedmap.Iterate(ctx, model.Model.Paths.PathItems)
-	for pair := range pairs {
-		path := pair.Key()
-		pitem := pair.Value()
-
-		g.GenerateMethod(ctx, client, path, http.MethodGet, pitem.Get)
-		g.GenerateMethod(ctx, client, path, http.MethodPost, pitem.Post)
+	if err = g.GenerateMethods(ctx, client, model.Model.Paths); err != nil {
+		log.Fatalf("couldn't generate methods: %v", err)
 	}
 
 	source, err := g.Source()

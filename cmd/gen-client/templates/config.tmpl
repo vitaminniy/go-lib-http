@@ -1,16 +1,16 @@
-type Config struct {
-	Default QOS
-}
-
-// QOS stands for quality-of-service configuration.
-type QOS struct {
-	Timeout time.Duration
-}
-
-func (q *QOS) context(ctx context.Context) (context.Context, context.CancelFunc) {
-	if q.Timeout == 0 {
-		return ctx, func() {}
+// DefaultConfig returns default configuration.
+func DefaultConfig() Config {
+	return Config{
+		{{- range $m := .Methods }}
+		{{ $m }}: config.QOS{},
+		{{ end }}
 	}
-
-	return context.WithTimeout(ctx, q.Timeout)
 }
+
+// Config controls service configuration.
+type Config struct {
+	{{- range $m := .Methods }}
+	{{ $m }} config.QOS
+	{{ end }}
+}
+

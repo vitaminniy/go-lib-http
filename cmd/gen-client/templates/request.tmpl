@@ -32,8 +32,12 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	request *{{ .Request.Name }},
 ) (*{{ .Response.Name }}, error) {
 	url := cl.baseURL.JoinPath("{{ .Path }}")
+	cfg := cl.getConfig().{{ .Name }}
 
-	{{- with .Request.QueryParams }}
+	ctx, cancel := cfg.Context(ctx)
+	defer cancel()
+
+	{{ with .Request.QueryParams }}
 	{
 		query := url.Query()
 
