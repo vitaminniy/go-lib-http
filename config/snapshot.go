@@ -4,49 +4,37 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/vitaminniy/go-lib-http/retry"
 )
 
-func NewSnapshot(cfg ServiceConfig) *Snapshot {
-	return &Snapshot{
-		svccfg: cfg,
+// NewSnapshot creates new config snapshot.
+func NewSnapshot[T any](cfg T) *Snapshot[T] {
+	return &Snapshot[T]{
+		cfg: cfg,
 	}
 }
 
-type Snapshot struct {
-	mu     sync.RWMutex
-	svccfg ServiceConfig
+// Snapshot provides thread-safe access to service configuration.
+type Snapshot[T any] struct {
+	mu  sync.RWMutex
+	cfg T
 }
 
-func (s *Snapshot) Update(cfg ServiceConfig) {
+func (s *Snapshot[T]) Update(cfg T) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.svccfg = cfg
+	s.cfg = cfg
 }
 
-// QOS returns QOS configuration for the given endpoint.
-func (s *Snapshot) QOS(name string) QOS {
+func (s *Snapshot[T]) Get() T {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if qos, ok := s.svccfg.Endpoints[name]; ok {
-		return qos
-	}
-
-	return s.svccfg.Default
-}
-
-// ServiceConfig controls service configuration.
-type ServiceConfig struct {
-	Default   QOS
-	Endpoints map[string]QOS
+	return s.cfg
 }
 
 type QOS struct {
 	Timeout time.Duration
-	Retry   retry.Config
 }
 
 func (q *QOS) Context(ctx context.Context) (context.Context, context.CancelFunc) {
