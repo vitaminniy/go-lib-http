@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/vitaminniy/go-lib-http/config"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
@@ -32,6 +34,13 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
+// WithSnapshot overrides the default config snapshot.
+func WithSnapshot(snapshot *config.Snapshot[Config]) Option {
+	return func(cl *MessageService) {
+		cl.snapshot = snapshot
+	}
+}
+
 // NewMessageService creates a new MessageService http client.
 func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) {
 	parsed, err := url.Parse(baseurl)
@@ -44,6 +53,7 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 		httpClient: &http.Client{
 			Timeout: time.Second * 1, // Arbitrary value to avoid hanging forever.
 		},
+		snapshot: config.NewSnapshot(DefaultConfig()),
 	}
 
 	for _, opt := range opts {
@@ -56,6 +66,15 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
+	snapshot   *config.Snapshot[Config]
+}
+
+func (cl *MessageService) getConfig() Config {
+	if cl.snapshot == nil {
+		return DefaultConfig()
+	}
+
+	return cl.snapshot.Get()
 }
 
 type MessageRequestBody struct {
@@ -67,6 +86,18 @@ type MessageRequestBody struct {
 type MessageResponseBody struct {
 	Id   string `json:"id"`
 	Meta string `json:"meta,omitempty"`
+}
+
+// DefaultConfig returns default configuration.
+func DefaultConfig() Config {
+	return Config{
+		POSTApiV1Message: config.QOS{},
+	}
+}
+
+// Config controls service configuration.
+type Config struct {
+	POSTApiV1Message config.QOS
 }
 
 type POSTApiV1MessageRequest struct {
@@ -88,6 +119,10 @@ func (cl *MessageService) POSTApiV1Message(
 	request *POSTApiV1MessageRequest,
 ) (*POSTApiV1MessageResponse, error) {
 	url := cl.baseURL.JoinPath("/api/v1/message")
+	cfg := cl.getConfig().POSTApiV1Message
+
+	ctx, cancel := cfg.Context(ctx)
+	defer cancel()
 
 	body := &bytes.Buffer{}
 	if err := json.NewEncoder(body).Encode(&request.Body); err != nil {

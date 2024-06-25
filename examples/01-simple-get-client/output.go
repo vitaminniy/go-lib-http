@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/vitaminniy/go-lib-http/config"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
@@ -32,6 +34,13 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
+// WithSnapshot overrides the default config snapshot.
+func WithSnapshot(snapshot *config.Snapshot[Config]) Option {
+	return func(cl *MessageService) {
+		cl.snapshot = snapshot
+	}
+}
+
 // NewMessageService creates a new MessageService http client.
 func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) {
 	parsed, err := url.Parse(baseurl)
@@ -44,6 +53,7 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 		httpClient: &http.Client{
 			Timeout: time.Second * 1, // Arbitrary value to avoid hanging forever.
 		},
+		snapshot: config.NewSnapshot(DefaultConfig()),
 	}
 
 	for _, opt := range opts {
@@ -56,6 +66,15 @@ func NewMessageService(baseurl string, opts ...Option) (*MessageService, error) 
 type MessageService struct {
 	baseURL    *url.URL
 	httpClient *http.Client
+	snapshot   *config.Snapshot[Config]
+}
+
+func (cl *MessageService) getConfig() Config {
+	if cl.snapshot == nil {
+		return DefaultConfig()
+	}
+
+	return cl.snapshot.Get()
 }
 
 type MessagesResponseBody struct {
@@ -66,6 +85,18 @@ type Message struct {
 	Id       string `json:"id"`
 	SenderId string `json:"sender_id"`
 	Text     string `json:"text"`
+}
+
+// DefaultConfig returns default configuration.
+func DefaultConfig() Config {
+	return Config{
+		GETApiV1Messages: config.QOS{},
+	}
+}
+
+// Config controls service configuration.
+type Config struct {
+	GETApiV1Messages config.QOS
 }
 
 type GETApiV1MessagesRequest struct {
@@ -91,6 +122,11 @@ func (cl *MessageService) GETApiV1Messages(
 	request *GETApiV1MessagesRequest,
 ) (*GETApiV1MessagesResponse, error) {
 	url := cl.baseURL.JoinPath("/api/v1/messages")
+	cfg := cl.getConfig().GETApiV1Messages
+
+	ctx, cancel := cfg.Context(ctx)
+	defer cancel()
+
 	{
 		query := url.Query()
 
