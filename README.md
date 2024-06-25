@@ -20,19 +20,19 @@ make help
 
 - [ ] Handle inline-defined properties
 - [x] Add client constructor
-- [ ] Add QOS
-    - [ ] Shapshot config storage
-    - [ ] QOS config
+- [x] Add QOS
+    - [x] Shapshot config storage
+    - [x] QOS config
     - [ ] CircuitBreaker creation
     - [ ] Handle retries
     - [ ] Add request hedging support
 - [ ] Handle url path params
 - [x] Handle url query params
-- [ ] Handle `HEAD` method
+- [x] Handle `HEAD` method
 - [x] Handle `GET` method
 - [x] Handle `POST` method
-- [ ] Handle `PUT` method
-- [ ] Handle `DELETE` method
+- [x] Handle `PUT` method
+- [x] Handle `DELETE` method
 - [ ] Generate multi-file references (e.g. file A has `$ref:
   "../fileB.yaml#/definitions/SomeType"`)
 - [ ] Generate `oneOf` and `anyOf` types
