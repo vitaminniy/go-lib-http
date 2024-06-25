@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/vitaminniy/go-lib-http/config"
 )
 
 // This is needed to have bytes imported when non-body requests are generated.
@@ -34,10 +32,10 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithSnapshot overrides the default config snapshot.
-func WithSnapshot(snapshot *config.Snapshot[Config]) Option {
+// WithConfigFunc overrides the default config function.
+func WithConfigFunc(configFunc ConfigFunc) Option {
 	return func(cl *{{ .ClientName }}) {
-		cl.snapshot = snapshot
+		cl.configFunc = configFunc
 	}
 }
 
@@ -53,7 +51,6 @@ func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, 
 		httpClient: &http.Client{
 			Timeout: time.Second * 1, // Arbitrary value to avoid hanging forever.
 		},
-		snapshot: config.NewSnapshot(DefaultConfig()),
 	}
 
 	for _, opt := range opts {
@@ -66,14 +63,14 @@ func New{{ .ClientName }} (baseurl string, opts ...Option) (*{{ .ClientName }}, 
 type {{ .ClientName }} struct {
   baseURL *url.URL
   httpClient *http.Client
-  snapshot *config.Snapshot[Config]
+  configFunc ConfigFunc
 }
 
 
 func (cl *{{ .ClientName }}) getConfig() Config {
-	if cl.snapshot == nil {
+	if cl.configFunc == nil {
 		return DefaultConfig()
 	}
 
-	return cl.snapshot.Get()
+	return cl.configFunc()
 }

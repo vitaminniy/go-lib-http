@@ -34,7 +34,7 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	url := cl.baseURL.JoinPath("{{ .Path }}")
 	cfg := cl.getConfig().{{ .Name }}
 
-	ctx, cancel := cfg.Context(ctx)
+	ctx, cancel := cfg.context(ctx)
 	defer cancel()
 
 	{{ with .Request.QueryParams }}

@@ -1,16 +1,30 @@
-// DefaultConfig returns default configuration.
-func DefaultConfig() Config {
-	return Config{
-		{{- range $m := .Methods }}
-		{{ $m }}: config.QOS{},
-		{{ end }}
-	}
+type QOS struct {
+	Timeout time.Duration
 }
+
+func (q *QOS) context(ctx context.Context) (context.Context, context.CancelFunc) {
+	if q.Timeout == 0 {
+		return ctx, func() {}
+	}
+
+	return context.WithTimeout(ctx, q.Timeout)
+}
+
+type ConfigFunc func() Config
 
 // Config controls service configuration.
 type Config struct {
 	{{- range $m := .Methods }}
-	{{ $m }} config.QOS
+	{{ $m }} QOS
 	{{ end }}
+}
+
+// DefaultConfig returns default configuration.
+func DefaultConfig() Config {
+	return Config{
+		{{- range $m := .Methods }}
+		{{ $m }}: QOS{},
+		{{ end }}
+	}
 }
 
