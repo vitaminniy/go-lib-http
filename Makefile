@@ -18,12 +18,9 @@ help:
 	done
 
 install: ## install everything
-install: install-gen-client
+install:
+	go install ./cmd/go-gen-http
 .PHONY: install
-
-install-gen-client: ## installs http client generator
-	go install ./cmd/gen-client
-.PHONY: install-gen-client
 
 test: ## runs tests
 test: test-unit
@@ -38,7 +35,7 @@ test-unit:
 EXAMPLES = $(wildcard examples/*)
 
 generate-examples: ## generates examples
-generate-examples: install-gen-client
+generate-examples: install
 	@for example in $(EXAMPLES); do \
 		$(MAKE) -C $$example generate; \
 	done
