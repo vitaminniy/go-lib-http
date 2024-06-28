@@ -21,8 +21,8 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: go-http-gen [options] <input-file>\n")
-	fmt.Fprintf(os.Stderr, "\tgo-http-gen -client-name ExampleService spec.yaml\n")
+	fmt.Fprintf(os.Stderr, "Usage: go-gen-http [options] <input-file>\n")
+	fmt.Fprintf(os.Stderr, "\tgo-gen-http -client-name ExampleService spec.yaml\n")
 	fmt.Fprintf(os.Stderr, "\nFlags:\n")
 
 	flag.PrintDefaults()
