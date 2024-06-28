@@ -80,18 +80,9 @@ func main() {
 
 	ctx := context.Background()
 	g := Generator{}
-	client := canonize(*clientName)
 
-	if err = g.GenerateClient(client, os.Args); err != nil {
-		log.Fatalf("couldn't generate client: %v", err)
-	}
-
-	if err = g.GenerateComponents(ctx, model.Model.Components); err != nil {
-		log.Fatalf("couldn't generate components: %v", err)
-	}
-
-	if err = g.GenerateMethods(ctx, client, model.Model.Paths); err != nil {
-		log.Fatalf("couldn't generate methods: %v", err)
+	if err = g.Generate(ctx, model.Model, *clientName, os.Args); err != nil {
+		log.Fatalf("could not generate client: %v", err)
 	}
 
 	source, err := g.Source()

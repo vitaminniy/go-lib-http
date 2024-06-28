@@ -95,7 +95,30 @@ type Generator struct {
 	buf bytes.Buffer
 }
 
-func (g *Generator) GenerateClient(name string, args []string) error {
+func (g *Generator) Generate(
+	ctx context.Context,
+	doc v3.Document,
+	client string,
+	args []string,
+) error {
+	client = canonize(client)
+
+	if err := g.generateClient(client, args); err != nil {
+		return fmt.Errorf("could not generate client: %w", err)
+	}
+
+	if err := g.generateComponents(ctx, doc.Components); err != nil {
+		return fmt.Errorf("could not generate components: %w", err)
+	}
+
+	if err := g.generateMethods(ctx, client, doc.Paths); err != nil {
+		return fmt.Errorf("could not generate methods: %w", err)
+	}
+
+	return nil
+}
+
+func (g *Generator) generateClient(name string, args []string) error {
 	return clientTemplate.Execute(&g.buf, map[string]string{
 		"ClientName": name,
 		"Package":    strings.ToLower(name),
@@ -103,7 +126,7 @@ func (g *Generator) GenerateClient(name string, args []string) error {
 	})
 }
 
-func (g *Generator) GenerateComponents(
+func (g *Generator) generateComponents(
 	ctx context.Context,
 	components *v3.Components,
 ) error {
@@ -135,12 +158,7 @@ func (g *Generator) GenerateComponents(
 	return nil
 }
 
-type Pair[F any, S any] struct {
-	First  F
-	Second S
-}
-
-func (g *Generator) GenerateMethods(
+func (g *Generator) generateMethods(
 	ctx context.Context,
 	client string,
 	paths *v3.Paths,
