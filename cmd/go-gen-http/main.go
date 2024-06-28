@@ -32,7 +32,7 @@ func usage() {
 func main() {
 	log.SetOutput(os.Stderr)
 	log.SetFlags(0)
-	log.SetPrefix("go-http-gen: ")
+	log.SetPrefix("go-gen-http: ")
 
 	flag.Usage = usage
 	flag.Parse()
