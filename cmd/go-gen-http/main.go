@@ -13,6 +13,7 @@ import (
 
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
+	"github.com/vitaminniy/go-lib-http/cmd/go-gen-http/generator"
 )
 
 var (
@@ -79,7 +80,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	g := Generator{}
+	g := generator.Generator{}
 
 	if err = g.Generate(ctx, model.Model, *clientName, os.Args); err != nil {
 		log.Fatalf("could not generate client: %v", err)
