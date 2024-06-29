@@ -74,6 +74,34 @@ func (cl *MessageService) getConfig() Config {
 	return cl.configFunc()
 }
 
+// MethodConfig controls method behavior.
+type MethodConfig struct {
+	Timeout time.Duration
+}
+
+func (cfg *MethodConfig) context(ctx context.Context) (context.Context, context.CancelFunc) {
+	if cfg.Timeout == 0 {
+		return ctx, func() {}
+	}
+
+	return context.WithTimeout(ctx, cfg.Timeout)
+}
+
+// ConfigFunc returns configuration.
+type ConfigFunc func() Config
+
+// Config contains method configurations.
+type Config struct {
+	GETApiV1Messages MethodConfig
+}
+
+// DefaultConfig returns default configuration.
+//
+// TODO(max): Handle default config creation.
+func DefaultConfig() Config {
+	return Config{}
+}
+
 type MessagesResponseBody struct {
 	Messages []Message `json:"messages"`
 }
@@ -84,35 +112,10 @@ type Message struct {
 	Text     string `json:"text"`
 }
 
-type QOS struct {
-	Timeout time.Duration
-}
-
-func (q *QOS) context(ctx context.Context) (context.Context, context.CancelFunc) {
-	if q.Timeout == 0 {
-		return ctx, func() {}
-	}
-
-	return context.WithTimeout(ctx, q.Timeout)
-}
-
-type ConfigFunc func() Config
-
-// Config controls service configuration.
-type Config struct {
-	GETApiV1Messages QOS
-}
-
-// DefaultConfig returns default configuration.
-func DefaultConfig() Config {
-	return Config{
-		GETApiV1Messages: QOS{},
-	}
-}
-
 type GETApiV1MessagesRequest struct {
 	// HeaderUserAgent is "User-Agent" header value.
 	HeaderUserAgent string
+
 	// Headers is a list of additional headers.
 	Headers map[string]string
 

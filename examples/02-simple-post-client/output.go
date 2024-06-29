@@ -74,6 +74,34 @@ func (cl *MessageService) getConfig() Config {
 	return cl.configFunc()
 }
 
+// MethodConfig controls method behavior.
+type MethodConfig struct {
+	Timeout time.Duration
+}
+
+func (cfg *MethodConfig) context(ctx context.Context) (context.Context, context.CancelFunc) {
+	if cfg.Timeout == 0 {
+		return ctx, func() {}
+	}
+
+	return context.WithTimeout(ctx, cfg.Timeout)
+}
+
+// ConfigFunc returns configuration.
+type ConfigFunc func() Config
+
+// Config contains method configurations.
+type Config struct {
+	POSTApiV1Message MethodConfig
+}
+
+// DefaultConfig returns default configuration.
+//
+// TODO(max): Handle default config creation.
+func DefaultConfig() Config {
+	return Config{}
+}
+
 type MessageRequestBody struct {
 	SenderId string `json:"sender_id"`
 	Text     string `json:"text"`
@@ -83,32 +111,6 @@ type MessageRequestBody struct {
 type MessageResponseBody struct {
 	Id   string `json:"id"`
 	Meta string `json:"meta,omitempty"`
-}
-
-type QOS struct {
-	Timeout time.Duration
-}
-
-func (q *QOS) context(ctx context.Context) (context.Context, context.CancelFunc) {
-	if q.Timeout == 0 {
-		return ctx, func() {}
-	}
-
-	return context.WithTimeout(ctx, q.Timeout)
-}
-
-type ConfigFunc func() Config
-
-// Config controls service configuration.
-type Config struct {
-	POSTApiV1Message QOS
-}
-
-// DefaultConfig returns default configuration.
-func DefaultConfig() Config {
-	return Config{
-		POSTApiV1Message: QOS{},
-	}
 }
 
 type POSTApiV1MessageRequest struct {
