@@ -35,3 +35,13 @@ func must[T any](value T, err error) T {
 
 	return value
 }
+
+func resolveptr[T any](ptr *T) T {
+	var val T
+
+	if ptr == nil {
+		return val
+	}
+
+	return *ptr
+}

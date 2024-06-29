@@ -1,43 +1,45 @@
-type {{ .Request.Name }} struct {
-	{{- range .Request.Headers }}
+type {{ .Path.Request.Name }} struct {
+    {{ with .Path.Request.Headers -}}
+	{{ range .Values -}}
 	// Header{{ .Name }} is "{{ .Key }}" header value.
 	Header{{ .Name }} string
-	{{- end }}
+	{{ end }}
+	{{ end -}}
 	// Headers is a list of additional headers.
 	Headers map[string]string
 
-	{{ with .Request.QueryParams }}
+	{{ with .Path.Request.QueryParams }}
 	{{ range .Values }}
 	// Query{{ .Name }} is "{{ .Key }}" query parameter.
 	Query{{ .Name }} {{ if .Required }} string {{ else }} *string {{ end }}
 	{{- end }}
 	{{- end }}
 
-	{{ with .Request.Body }}
+	{{ with .Path.Request.Body }}
 	// Body is a request body.
 	Body *{{ .Name }}
 	{{- end -}}
 }
 
-type {{ .Response.Name }} struct {
+type {{ .Path.Response.Name }} struct {
 	Headers map[string][]string
 
-	{{ range .Response.Codes }}
+	{{ range .Path.Response.Codes }}
 	Body{{ .Code }} *{{ .Name }}
 	{{ end }}
 }
 
-func (cl *{{ .Client }}) {{ .Name }}(
+func (cl *{{ .Client }}) {{ .Path.CanonicalName }}(
 	ctx context.Context,
-	request *{{ .Request.Name }},
-) (*{{ .Response.Name }}, error) {
-	url := cl.baseURL.JoinPath("{{ .Path }}")
-	cfg := cl.getConfig().{{ .Name }}
+	request *{{ .Path.Request.Name }},
+) (*{{ .Path.Response.Name }}, error) {
+	url := cl.baseURL.JoinPath("{{ .Path.URL }}")
+	cfg := cl.getConfig().{{ .Path.CanonicalName }}
 
 	ctx, cancel := cfg.context(ctx)
 	defer cancel()
 
-	{{ with .Request.QueryParams }}
+	{{ with .Path.Request.QueryParams }}
 	{
 		query := url.Query()
 
@@ -57,20 +59,20 @@ func (cl *{{ .Client }}) {{ .Name }}(
 	}
 	{{ end }}
 
-	{{ if .Request.Body }}
+	{{ if .Path.Request.Body }}
 	body := &bytes.Buffer{}
 	if err := json.NewEncoder(body).Encode(&request.Body); err != nil {
 		return nil, fmt.Errorf("could not encode request body: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url.String(), body)
+	req, err := http.NewRequestWithContext(ctx, "{{ .Path.Method }}", url.String(), body)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
 
 	req.Header.Add("Content-Type", "application/json")
 	{{ else }}
-	req, err := http.NewRequestWithContext(ctx, "{{ .Method }}", url.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "{{ .Path.Method }}", url.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare request: %w", err)
 	}
@@ -78,9 +80,11 @@ func (cl *{{ .Client }}) {{ .Name }}(
 
 	req.Header.Add("Accept", "application/json")
 
-	{{ range .Request.Headers }}
+	{{ with .Path.Request.Headers }}
+	{{ range .Values }}
 	req.Header.Add("{{ .Key }}", request.Header{{ .Name }})
-	{{- end }}
+	{{ end }}
+	{{ end -}}
 
 	for key, value := range request.Headers {
 		req.Header.Set(key, value)
@@ -101,11 +105,11 @@ func (cl *{{ .Client }}) {{ .Name }}(
 		return nil, fmt.Errorf("got response with status %d: %q", resp.StatusCode, string(raw))
 	}
 
-	response := &{{ .Response.Name }}{
+	response := &{{ .Path.Response.Name }}{
 		Headers: resp.Header,
 	}
 
-	{{ range .Response.Codes }}
+	{{ range .Path.Response.Codes }}
 	if resp.StatusCode == {{ .Code }} {
 		var body {{ .Name }}
 		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
