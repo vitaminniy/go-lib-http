@@ -16,8 +16,6 @@ import (
 	"github.com/pb33f/libopenapi/orderedmap"
 )
 
-const contentType = "application/json"
-
 var (
 	//go:embed templates/client.tmpl
 	rawClientTemplate string
@@ -105,10 +103,6 @@ func (g *Generator) generateClient(name string, args []string) error {
 }
 
 func (g *Generator) generateConfig(paths []Path) error {
-	if len(paths) == 0 {
-		return nil
-	}
-
 	return configTemplate.Execute(&g.buf, map[string]any{
 		"Paths": paths,
 	})
